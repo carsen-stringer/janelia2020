@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import logging
@@ -161,6 +162,7 @@ class GaborFit(Analyzer):
         params_jax = init(GaborFit._gen_params(rf_pcaed, self.params_init))
 
         t0 = time.time()
+
         for i in range(self.n_iter):
             Δ = grad(GaborFit._loss_func)(
                 get_params(params_jax), rf_pcaed, rf_dim, self.penalties
@@ -210,12 +212,12 @@ class GaborFit(Analyzer):
         xp = (pos_x - x) * cos(θ) - (pos_y - y) * sin(θ)
         yp = (pos_x - x) * sin(θ) + (pos_y - y) * cos(θ)
 
-        output = exp(-(xp ** 2 + (γ * yp) ** 2) / (2 * σ ** 2)) * exp(1j * (2 * π * xp / λ + φ))
+        output = exp(-(xp ** 2 + (γ * yp) ** 2) / (2 * σ ** 2)) * cos(2 * π * xp / λ + φ)
 
-        return zscore_img(output.real)
+        return zscore_img(output)
 
     @staticmethod
-    @partial(jit, static_argnums=(2, 3))
+    @partial(jit, static_argnums=(2,3))
     def _loss_func(params, img, rf_dim, penalties):
         made = GaborFit._make_gabor(params, rf_dim)
         metric = jnp.mean(-correlate(made, img))
@@ -232,8 +234,11 @@ class GaborFit(Analyzer):
         n = rf.shape[0]
 
         params = np.zeros((n, len(p)))
+        np.random.seed(1)
         for i, v in enumerate(p.values()):
             params[:, i] = v
+            #if i==1:
+            #    params[:,i] = np.random.rand()*2*np.pi - np.pi
 
         # Center location.
         yc, xc = rf.shape[1] // 2 + 1, rf.shape[2] // 2 + 1
